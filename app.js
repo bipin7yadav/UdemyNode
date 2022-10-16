@@ -1,31 +1,33 @@
-const express= require('express')
-const fs=require("fs")
-const morgan = require("morgan")
+const express = require('express');
+const morgan = require('morgan');
 
-const tourRouter =require('./routes/tourRoute')
+const tourRouter = require('./routes/tourRoute');
 
-const userRouter=require('./routes/userRoute')
+const userRouter = require('./routes/userRoute');
 
-const app=express()
-
-
+const app = express();
 
 // Middlewares
 
-app.use(express.json())
+app.use(express.json());
 
-app.use(morgan('dev'))
+// app.use(morgan('dev'))
+if (process.env.NODE_ENV === 'development') {
+  app.use(morgan('dev'));
+}
 
+app.use(express.static(`${__dirname}/public`));
 
-app.use((req,res,next)=>{
-    console.log("Hello from server");
-    next()
-})
+app.use((req, res, next) => {
+  // eslint-disable-next-line no-console
+  console.log(' Hello from server ');
+  next();
+});
 
-app.use((req,res,next)=>{
-    req.requestTime =new Date().toISOString()
-    next()
-})
+app.use((req, res, next) => {
+  req.requestTime = new Date().toISOString();
+  next();
+});
 
 // app.get('/',(req,res)=>{
 //     res
@@ -33,16 +35,12 @@ app.use((req,res,next)=>{
 //     .json({message:"Hello from the server side!",app:'natours'})
 // })
 
-
 // app.post("/",(req,res)=>{
 //     res.
 //     send('You can post here')
 // })
 
-
 // let tours= JSON.parse(fs.readFileSync(`${__dirname}/dev-data/data/tours-simple.json`))
-
-
 
 // // Route Handlers
 
@@ -101,7 +99,6 @@ app.use((req,res,next)=>{
 
 // let updateTour=(req,res)=>{
 
-
 //     if(req.params.id*1>tours.length){
 //         return res.status(404).json({
 //             status:"failed",
@@ -118,7 +115,6 @@ app.use((req,res,next)=>{
 // }
 
 // const deleteTour=(req,res)=>{
-
 
 //     if(req.params.id*1>tours.length){
 //         return res.status(404).json({
@@ -179,9 +175,6 @@ app.use((req,res,next)=>{
 
 // app.delete('/api/v1/tours/:id',deleteTour)
 
-
-
-
 // app.route('/api/v1/tours').get(getAllTours).post(createTour)
 
 // app.route("/api/v1/tours/:id").get(getTour).patch(updateTour).delete(deleteTour)
@@ -189,7 +182,6 @@ app.use((req,res,next)=>{
 // app.route('/api/v1/users').get(getAllUsers).post(createUser)
 
 // app.route('/api/vi/users/:id').get(getUser).patch(updateUser).delete(deleteUser)
-
 
 /// Mounting Routers
 // const tourRouter=express.Router()
@@ -204,10 +196,8 @@ app.use((req,res,next)=>{
 
 // userRouter.route('/:id').get(getUser).patch(updateUser).delete(deleteUser)
 
-app.use('/api/v1/tours',tourRouter)
-app.use('/api/v1/users',userRouter)
-
-
+app.use('/api/v1/tours', tourRouter);
+app.use('/api/v1/users', userRouter);
 
 // Start Server
 
@@ -216,4 +206,4 @@ app.use('/api/v1/users',userRouter)
 //     console.log(`App running on port ${port} ...`);
 // })
 
-module.exports= app
+module.exports = app;
