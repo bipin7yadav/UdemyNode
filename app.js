@@ -1,9 +1,9 @@
-const express = require('express');
-const morgan = require('morgan');
+const express = require("express");
+const morgan = require("morgan");
 
-const tourRouter = require('./routes/tourRoute');
+const tourRouter = require("./routes/tourRoute");
 
-const userRouter = require('./routes/userRoute');
+const userRouter = require("./routes/userRoute");
 
 const app = express();
 
@@ -12,15 +12,15 @@ const app = express();
 app.use(express.json());
 
 // app.use(morgan('dev'))
-if (process.env.NODE_ENV === 'development') {
-  app.use(morgan('dev'));
+if (process.env.NODE_ENV === "development") {
+  app.use(morgan("dev"));
 }
 
 app.use(express.static(`${__dirname}/public`));
 
 app.use((req, res, next) => {
   // eslint-disable-next-line no-console
-  console.log(' Hello from server ');
+  console.log(" Hello from server ");
   next();
 });
 
@@ -196,8 +196,8 @@ app.use((req, res, next) => {
 
 // userRouter.route('/:id').get(getUser).patch(updateUser).delete(deleteUser)
 
-app.use('/api/v1/tours', tourRouter);
-app.use('/api/v1/users', userRouter);
+app.use("/api/v1/tours", tourRouter);
+app.use("/api/v1/users", userRouter);
 
 // Start Server
 
