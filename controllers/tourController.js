@@ -7,7 +7,54 @@ const Tour = require("./../models/tourModel");
 exports.getAllTours = async (req, res) => {
 
   try {
-    const tours = await Tour.find()
+
+    // Build Query
+
+    /// 1A) Filtering
+
+    const queryObj = {...req.query}
+    const excludeFields = ['page', "sort", "limit", "fields"]
+    excludeFields.forEach(element => {
+      delete queryObj[element]
+    });
+
+
+    ////1B) Advanced Filtering
+
+    let queryStr = JSON.stringify(queryObj)
+    queryStr = queryStr.replace(/\b(gte|gt|lte|lt)\b/g, match => `$${match}`)
+
+    console.log(queryStr)
+    
+    // const query = Tour.find()
+    //   .where('duration')
+    //   .equals(5)
+    //   .where('difficulty')
+    //   .equals('easy')
+    let query = Tour.find(JSON.parse(queryStr))
+    
+    //// 2) Sorting 
+
+    if(req.query.sort){
+      const sortBy = req.query.sort.split(',').join(' ')
+      console.log(sortBy)
+      query = query.sort(sortBy)
+    }else{
+      query = query.sort('--createdAt')
+    }
+
+    /////// 3) Field Limiting
+    if(req.query.fields){
+      const fields = req.query.fields.split(',').join(' ')
+      query = query.select(fields)
+    }else{
+      query = query.select('-__v')
+    }
+    // Execute Query
+    // const tours = await Tour.find()
+    
+    // const query = Tour.find(queryObj)
+    const tours = await query
     res.status(200).json({
       status: "success",
       requestedAt: req.requestTime,
