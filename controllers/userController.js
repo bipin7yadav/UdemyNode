@@ -1,6 +1,7 @@
 const User = require('./../models/userModel.js');
 const catchAsync = require('./../utils/catchAsync')
 const AppError = require("./../utils/appError")
+const factory = require('./handleFactory')
 
 const filterObj = (obj, ...allowedFields) => {
   const newObj = {};
@@ -88,3 +89,8 @@ exports.deleteUser = (req, res) => {
     message: 'This route is not yet implemented'
   });
 };
+
+
+// Do NOT update passwords with this!
+exports.updateUser = factory.updateOne(User);
+exports.deleteUser = factory.deleteOne(User);
