@@ -3,21 +3,21 @@ const catchAsync = require("./../utils/catchAsync")
 const factory = require('./handleFactory')
 
 
-exports.getAllReviews = catchAsync( async(req,res,next)=>{
+// exports.getAllReviews = catchAsync( async(req,res,next)=>{
 
-  let filter ={}
+//   let filter ={}
   
-  if(req.params.tourId) filter={ tours : req.params.tourId}
-    const reviews = await Review.find(filter) 
+//   if(req.params.tourId) filter={ tours : req.params.tourId}
+//     const reviews = await Review.find(filter) 
 
-    res.status(200).json({
-        status: "success",
-        results: reviews.length,
-        data: {
-          reviews: reviews
-        }
-      });
-})
+//     res.status(200).json({
+//         status: "success",
+//         results: reviews.length,
+//         data: {
+//           reviews: reviews
+//         }
+//       });
+// })
 
 exports.setTourUserIds = (req, res, next) => {
   // Allow nested routes
@@ -26,7 +26,8 @@ exports.setTourUserIds = (req, res, next) => {
   next();
 };
 
-
+exports.getAllReviews = factory.getAll(Review)
 exports.createReview = factory.createOne(Review);
 exports.deleteReview = factory.deleteOne(Review)
 exports.updateReview = factory.updateOne(Review)
+exports.getReview = factory.getOne(Review)
