@@ -83,6 +83,7 @@ exports.createOne = Model =>
         .fieldLimiting()
         .pagination();
   
+      // const tours = await features.query.explain()
       const tours = await features.query
       // const tours = await query
       res.status(200).json({
