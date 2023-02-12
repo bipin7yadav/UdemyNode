@@ -7,6 +7,8 @@ const APIFeatures = require("./../utils/apiFeatures")
 const catchAsync = require("./../utils/catchAsync")
 
 const AppError = require("./../utils/appError")
+
+const factory = require('./handleFactory')
 // Route Handlers
 
 
@@ -17,162 +19,13 @@ exports.aliasTopTours = (req,res,next)=>{
   next();
 }
 
+exports.getTour = factory.getOne(Tour, { path: 'reviews' });
+exports.getAllTours = factory.getAll(Tour)
 
-exports.getAllTours = async (req, res) => {
+exports.createTour = factory.createOne(Tour);
+exports.updateTour = factory.updateOne(Tour)
 
-  try {
-
-    // Build Query
-
-    /// 1A) Filtering
-
-    // const queryObj = {...req.query}
-    // const excludeFields = ['page', "sort", "limit", "fields"]
-    // excludeFields.forEach(element => {
-    //   delete queryObj[element]
-    // });
-
-
-    // ////1B) Advanced Filtering
-
-    // let queryStr = JSON.stringify(queryObj)
-    // queryStr = queryStr.replace(/\b(gte|gt|lte|lt)\b/g, match => `$${match}`)
-
-    // console.log(queryStr)
-    
-    // // const query = Tour.find()
-    // //   .where('duration')
-    // //   .equals(5)
-    // //   .where('difficulty')
-    // //   .equals('easy')
-    // let query = Tour.find(JSON.parse(queryStr))
-    
-    //// 2) Sorting 
-
-    // if(req.query.sort){
-    //   const sortBy = req.query.sort.split(',').join(' ')
-    //   console.log(sortBy)
-    //   query = query.sort(sortBy)
-    // }else{
-    //   query = query.sort('--createdAt')
-    // }
-
-    /////// 3) Field Limiting
-    // if(req.query.fields){
-    //   const fields = req.query.fields.split(',').join(' ')
-    //   query = query.select(fields)
-    // }else{
-    //   query = query.select('-__v')
-    // }
-
-
-    /// Pagination
-    // const page = req.query.page * 1 || 1;
-    // const limit = req.query.limit * 1 || 100
-    // const skip =(page-1) * limit 
-
-    // query = query.skip(skip).limit(limit);
-
-    // if(req.query.page){
-    //   const numTours = await Tour.countDocuments()
-    //   if(skip >= numTours) throw new Error('Thi page does not exist')
-    // }
-
-
-    // Execute Query
-    // const tours = await Tour.find()
-    
-    // const query = Tour.find(queryObj)
-    const features = new APIFeatures(Tour.find(),req.query)
-      .filter()
-      .sort()
-      .fieldLimiting()
-      .pagination();
-
-
-    const tours = await features.query
-    // const tours = await query
-    res.status(200).json({
-      status: "success",
-      requestedAt: req.requestTime,
-      result: tours.length,
-      data: {
-        tours: tours
-      }
-    });
-    
-  } catch (error) {
-    res.status(400).json({
-      status:"fail",
-      message:error
-    })
-  }
-};
-exports.createTour = catchAsync(async (req, res, next) => {
-
-  // const newTour = new Tour({})
-  // newTour.save()
-
-    const newTour = await Tour.create(req.body)
-
-  res.status(201).json({
-    status: "success",
-    data: {
-      tour: newTour
-    }
-  });
-
-}) 
-exports.getTour = catchAsync(async (req, res, next) => {
-  
-    const tour = await Tour.findById(req.params.id)
-    // Tour.findOne({_id:req.params.id})
-    
-    if(!tour){
-      return next(new AppError('No tour found with that ID',404))
-    }
-    res.status(200).json({
-      status: "success",
-      data: {
-        tour: tour
-      }
-    });
-  
-});
-
-exports.updateTour = catchAsync(async (req, res, next) => {
-  
-    const tour = await Tour.findByIdAndUpdate(req.params.id,req.body,{
-      new: true,
-      runValidators: true
-    })
-
-    if(!tour){
-      return next(new AppError('No tour found with that ID',404))
-    }
-    res.status(200).json({
-      status: "success",
-      data: {
-        tour
-      }
-    });
-  
-
-});
-
-exports.deleteTour = catchAsync(async (req, res, next) => {
-
-    const tour =  await Tour.findByIdAndDelete(req.params.id)
-
-    if(!tour){
-      return next(new AppError('No tour found with that ID',404))
-    }
-    res.status(204).json({
-      status: "success",
-      data: tour
-    });
-
-});
+exports.deleteTour = factory.deleteOne(Tour)
 
 
  exports.getTourStats = catchAsync(async (req,res,next) => {
@@ -249,3 +102,75 @@ exports.deleteTour = catchAsync(async (req, res, next) => {
     });
   
  })
+
+ // /tours-within/:distance/center/:latlng/unit/:unit
+// /tours-within/233/center/34.111745,-118.113491/unit/mi
+exports.getToursWithin = catchAsync(async (req, res, next) => {
+  const { distance, latlng, unit } = req.params;
+  const [lat, lng] = latlng.split(',');
+
+  const radius = unit === 'mi' ? distance / 3963.2 : distance / 6378.1;
+
+  if (!lat || !lng) {
+    next(
+      new AppError(
+        'Please provide latitutr and longitude in the format lat,lng.',
+        400
+      )
+    );
+  }
+
+  const tours = await Tour.find({
+    startLocation: { $geoWithin: { $centerSphere: [[lng, lat], radius] } }
+  });
+
+  res.status(200).json({
+    status: 'success',
+    results: tours.length,
+    data: {
+      data: tours
+    }
+  });
+});
+
+exports.getDistances = catchAsync(async (req, res, next) => {
+  const { latlng, unit } = req.params;
+  const [lat, lng] = latlng.split(',');
+
+  const multiplier = unit === 'mi' ? 0.000621371 : 0.001;
+
+  if (!lat || !lng) {
+    next(
+      new AppError(
+        'Please provide latitutr and longitude in the format lat,lng.',
+        400
+      )
+    );
+  }
+
+  const distances = await Tour.aggregate([
+    {
+      $geoNear: {
+        near: {
+          type: 'Point',
+          coordinates: [lng * 1, lat * 1]
+        },
+        distanceField: 'distance',
+        distanceMultiplier: multiplier
+      }
+    },
+    {
+      $project: {
+        distance: 1,
+        name: 1
+      }
+    }
+  ]);
+
+  res.status(200).json({
+    status: 'success',
+    data: {
+      data: distances
+    }
+  });
+});
