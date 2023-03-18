@@ -10,6 +10,7 @@ const AppError = require('./utils/appError')
 const globalErrorHandler = require('./controllers/errorCntroller')
 const cookieParser = require('cookie-parser');
 const compression = require('compression')
+const cors = require('cors');
 
 const tourRouter = require("./routes/tourRoute");
 const userRouter = require("./routes/userRoute");
@@ -20,10 +21,22 @@ const bookingController = require('./controllers/bookingController');
 const app = express();
 
 //1) Global Middlewares
+app.enable("trust proxy")
 
 app.set("view engine","pug")
 app.set("views",path.join(__dirname,"views"))
 
+
+// Implement CORS
+app.use(cors());
+// Access-Control-Allow-Origin *
+// api.natours.com, front-end natours.com
+// app.use(cors({
+//   origin: 'https://www.natours.com'
+// }))
+
+app.options('*', cors());
+// app.options('/api/v1/tours/:id', cors());
 
 //Serving static files
 // app.use(express.static(`${__dirname}/public`));
