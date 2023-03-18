@@ -9,6 +9,7 @@ const hpp = require("hpp")
 const AppError = require('./utils/appError')
 const globalErrorHandler = require('./controllers/errorCntroller')
 const cookieParser = require('cookie-parser');
+const bodyParser = require('body-parser');
 const compression = require('compression')
 const cors = require('cors');
 
@@ -74,6 +75,13 @@ const limiter = rateLimit({
 })
 
 app.use('/api',limiter)
+
+// Stripe webhook, BEFORE body-parser, because stripe needs the body as stream
+app.post(
+  '/webhook-checkout',
+  bodyParser.raw({ type: 'application/json' }),
+  bookingController.webhookCheckout
+);
 
 //Body parser reading date from body into req.body
 app.use(express.json({limit: '10kb'}));
