@@ -1,3 +1,4 @@
+const path = require("path")
 const express = require("express");
 const morgan = require("morgan");
 const rateLimit = require('express-rate-limit')
@@ -7,22 +8,59 @@ const xss = require("xss-clean")
 const hpp = require("hpp")
 const AppError = require('./utils/appError')
 const globalErrorHandler = require('./controllers/errorCntroller')
+const cookieParser = require('cookie-parser');
+const bodyParser = require('body-parser');
+const compression = require('compression')
+const cors = require('cors');
+
 const tourRouter = require("./routes/tourRoute");
-
 const userRouter = require("./routes/userRoute");
-
 const reviewRouter = require("./routes/reviewRoute")
-
+const viewRouter = require('./routes/viewRoutes');
+const bookingRouter = require('./routes/bookingRoutes');
+const bookingController = require('./controllers/bookingController');
 const app = express();
 
 //1) Global Middlewares
+app.enable("trust proxy")
+
+app.set("view engine","pug")
+app.set("views",path.join(__dirname,"views"))
+
+
+// Implement CORS
+app.use(cors());
+// Access-Control-Allow-Origin *
+// api.natours.com, front-end natours.com
+// app.use(cors({
+//   origin: 'https://www.natours.com'
+// }))
+
+app.options('*', cors());
+// app.options('/api/v1/tours/:id', cors());
+
+//Serving static files
+// app.use(express.static(`${__dirname}/public`));
+app.use(express.static(path.join(__dirname,"public")));
 
 //set HTTP security headers
 app.use(helmet())
-
+app.use(
+  helmet.contentSecurityPolicy({
+    directives: {
+      defaultSrc: ["'self'"],
+      baseUri: ["'self'"],
+      fontSrc: ["'self'", 'https:', 'data:'],
+      scriptSrc: ["'self'", 'https://*.cloudflare.com'],
+      objectSrc: ["'none'"],
+      styleSrc: ["'self'", 'https:', 'unsafe-inline'],
+      upgradeInsecureRequests: [],
+      connectSrc:["'self'"]
+    },
+  })
+);
 
 // app.use(morgan('dev'))
-
 
 //Development Logging 
 if (process.env.NODE_ENV === "development") {
@@ -38,8 +76,17 @@ const limiter = rateLimit({
 
 app.use('/api',limiter)
 
+// Stripe webhook, BEFORE body-parser, because stripe needs the body as stream
+app.post(
+  '/webhook-checkout',
+  bodyParser.raw({ type: 'application/json' }),
+  bookingController.webhookCheckout
+);
+
 //Body parser reading date from body into req.body
 app.use(express.json({limit: '10kb'}));
+app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+app.use(cookieParser());
 
 //Data sanitization against Nosql query injection
 app.use(mongoSanitize())
@@ -50,195 +97,31 @@ app.use(xss())
 //Prevent Parameter Pollution
 app.use(
   hpp({
-    whitelist:["duration","ratingsQuantity","ratingsAverage","maxGroupSize","difficulty","price"]
+    whitelist:[
+      "duration"
+    ,"ratingsQuantity",
+    "ratingsAverage",
+    "maxGroupSize",
+    "difficulty",
+    "price"]
   })
   )
 
-//Serving static files
-app.use(express.static(`${__dirname}/public`));
 
-// app.use((req, res, next) => {
-//   // eslint-disable-next-line no-console
-//   console.log(" Hello from server ");
-//   next();
-// });
 
+  app.use(compression())
 //Test Middleware
+
 app.use((req, res, next) => {
   req.requestTime = new Date().toISOString();
+  // console.log(req.cookies);
   next();
 });
-
-// app.get('/',(req,res)=>{
-//     res
-//     .status(200)
-//     .json({message:"Hello from the server side!",app:'natours'})
-// })
-
-// app.post("/",(req,res)=>{
-//     res.
-//     send('You can post here')
-// })
-
-// let tours= JSON.parse(fs.readFileSync(`${__dirname}/dev-data/data/tours-simple.json`))
-
-// // Route Handlers
-
-// const getAllTours=(req,res)=>{
-//     res.status(200).json({
-//         status:"success",
-//         result:tours.length,
-//         requestedAt:req.requestTime,
-//         data:{
-//             tours:tours
-//         }
-//     })
-// }
-//  const createTour =(req,res)=>{
-//     // console.log(req.body)
-//     const newId=tours[tours.length-1].id+1
-//     const newTour=Object.assign({id:newId},req.body)
-
-//     tours.push(newTour)
-
-//     fs.writeFile(`${__dirname}/dev-data/data/tours-simple.json`,JSON.stringify(tours),err=>{
-//         res.status(201).json({
-//             status:"success",
-//             data:{
-//                 tour:newTour
-//             }
-//         })
-//     })
-// }
-
-// const getTour =(req,res)=>{
-//     console.log(req.params);
-//     const id=req.params.id*1
-//     const tour=tours.find((a)=>a.id===id)
-
-//     // if(id>tours.length){
-//     //     return res.status(404).json({
-//     //         status:"failed",
-//     //         message:"Invalid Id"
-//     //     })
-//     // }
-
-//     if(!tour){
-//         return res.status(404).json({
-//             status:"failed",
-//             message:"Invalid Id"
-//         })
-//     }
-//     res.status(200).json({
-//         status:"success",
-//         data:{
-//             tour:tour
-//         }
-//     })
-// }
-
-// let updateTour=(req,res)=>{
-
-//     if(req.params.id*1>tours.length){
-//         return res.status(404).json({
-//             status:"failed",
-//             message:"Invalid Id"
-//         })
-//     }
-
-//     res.status(200).json({
-//         status:"success",
-//         data:{
-//             tour:"<updated tour here .... />>"
-//         }
-//     })
-// }
-
-// const deleteTour=(req,res)=>{
-
-//     if(req.params.id*1>tours.length){
-//         return res.status(404).json({
-//             status:"failed",
-//             message:"Invalid Id"
-//         })
-//     }
-
-//     res.status(204).json({
-//         status:"success",
-//         data:null
-//     })
-// }
-
-// const getAllUsers =(req,res)=>{
-//     res.status(500).json({
-//         status:"error",
-//         message:"This route is not yet implemented"
-//     })
-// }
-
-// const getUser =(req,res)=>{
-//     res.status(500).json({
-//         status:"error",
-//         message:"This route is not yet implemented"
-//     })
-// }
-
-// const createUser=(req,res)=>{
-//     res.status(500).json({
-//         status:"error",
-//         message:"This route is not yet implemented"
-//     })
-// }
-
-// const updateUser =(req,res)=>{
-//     res.status(500).json({
-//         status:"error",
-//         message:"This route is not yet implemented"
-//     })
-// }
-
-// const deleteUser =(req,res)=>{
-//     res.status(500).json({
-//         status:"error",
-//         message:"This route is not yet implemented"
-//     })
-// }
-//             Routes
-
-// app.get("/api/v1/tours",getAllTours)
-
-// app.post('/api/v1/tours',createTour)
-
-// app.get("/api/v1/tours/:id",getTour)
-
-// app.patch('/api/v1/tours/:id',updateTour)
-
-// app.delete('/api/v1/tours/:id',deleteTour)
-
-// app.route('/api/v1/tours').get(getAllTours).post(createTour)
-
-// app.route("/api/v1/tours/:id").get(getTour).patch(updateTour).delete(deleteTour)
-
-// app.route('/api/v1/users').get(getAllUsers).post(createUser)
-
-// app.route('/api/vi/users/:id').get(getUser).patch(updateUser).delete(deleteUser)
-
-/// Mounting Routers
-// const tourRouter=express.Router()
-
-// const userRouter=express.Router()
-
-// tourRouter.route('/').get(getAllTours).post(createTour)
-
-// tourRouter.route("/:id").get(getTour).patch(updateTour).delete(deleteTour)
-
-// userRouter.route('/').get(getAllUsers).post(createUser)
-
-// userRouter.route('/:id').get(getUser).patch(updateUser).delete(deleteUser)
-
+app.use('/', viewRouter);
 app.use("/api/v1/tours", tourRouter);
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/reviews",reviewRouter)
+app.use('/api/v1/bookings', bookingRouter);
 
 
 app.use('*',(req,res,next)=>{
